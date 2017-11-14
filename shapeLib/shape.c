@@ -1,6 +1,6 @@
 #include "shape.h"
 
-const Vec2 screenSize = {screenWidth, screenHeight};
+const Vec2 screenSize = {screenWidth, screenHeight};                 // made constants to be stored into the ROM
 const Vec2 screenCenter= {screenWidth/2, screenHeight/2};
 const Vec2 vec2Unit = {1,1}, vec2Zero = {0,0};;
 

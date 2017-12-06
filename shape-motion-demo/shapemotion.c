@@ -15,55 +15,57 @@
 #include <abCircle.h>
 
 #define GREEN_LED BIT6
+#define RED_LED BIT0
 
+#define P1LEFT BIT0
+#define P1RIGHT BIT1
 
-AbRect rect10 = {abRectGetBounds, abRectCheck, {10,10}}; /**< 10x10 rectangle */
-AbRArrow rightArrow = {abRArrowGetBounds, abRArrowCheck, 30};
+#define P2LEFT BIT2
+#define P2RIGHT BIT3
+
+#define BUTTONS p2sw_read()
+
+char player1,player2 =0;
+
+AbRect bottom_rec = {abRectGetBounds, abRectCheck, {15,2}}; /**< 10x10 rectangle */
+
+AbRect top_rec = {abRectGetBounds, abRectCheck, {15,2}}; /**< 10x10 rectangle */
 
 AbRectOutline fieldOutline = {	/* playing field */
   abRectOutlineGetBounds, abRectOutlineCheck,   
-  {screenWidth/2 - 10, screenHeight/2 - 10}
-};
-
-Layer layer4 = {
-  (AbShape *)&rightArrow,
-  {(screenWidth/2)+10, (screenHeight/2)+5}, /**< bit below & right of center */
-  {0,0}, {0,0},				    /* last & next pos */
-  COLOR_PINK,
-  0
-};
-  
-
-Layer layer3 = {		/**< Layer with an orange circle */
-  (AbShape *)&circle8,
-  {(screenWidth/2)+10, (screenHeight/2)+5}, /**< bit below & right of center */
-  {0,0}, {0,0},				    /* last & next pos */
-  COLOR_VIOLET,
-  &layer4,
+  {screenWidth/2 - 20, screenHeight/2 - 20}
 };
 
 
 Layer fieldLayer = {		/* playing field as a layer */
   (AbShape *) &fieldOutline,
-  {screenWidth/2, screenHeight/2},/**< center */
+  {screenWidth/2, screenHeight/2}, /**< center */
   {0,0}, {0,0},				    /* last & next pos */
-  COLOR_BLACK,
-  &layer3
+  COLOR_RED,
+  0
 };
 
-Layer layer1 = {		/**< Layer with a red square */
-  (AbShape *)&rect10,
-  {screenWidth/2, screenHeight/2}, /**< center */
+Layer layer2 = {		/**< Layer with p1 rectangle */
+  (AbShape *)&top_rec,
+  {screenWidth/2, 20}, /**< top of the fence */
   {0,0}, {0,0},				    /* last & next pos */
   COLOR_RED,
   &fieldLayer,
 };
 
-Layer layer0 = {		/**< Layer with an orange circle */
-  (AbShape *)&circle14,
-  {(screenWidth/2)+10, (screenHeight/2)+5}, /**< bit below & right of center */
+Layer layer1 = {		/**< Layer with p2 rectangle */
+  (AbShape *)&bottom_rec,
+  {screenWidth/2, screenHeight-20}, /**< bottom of fence */
   {0,0}, {0,0},				    /* last & next pos */
-  COLOR_ORANGE,
+  COLOR_RED,
+  &layer2,
+};
+
+Layer layer0 = {		/**< Layer with an red ping pong ball */
+  (AbShape *)&circle7,
+  {(screenWidth/2), (screenHeight/2)}, /**< center */
+  {0,0}, {0,0},				    /* last & next pos */
+  COLOR_RED,
   &layer1,
 };
 
@@ -78,10 +80,10 @@ typedef struct MovLayer_s {
 } MovLayer;
 
 /* initial value of {0,0} will be overwritten */
-MovLayer ml3 = { &layer3, {1,1}, 0 }; /**< not all layers move */
-MovLayer ml1 = { &layer1, {1,2}, &ml3 }; 
-MovLayer ml0 = { &layer0, {2,1}, &ml1 }; 
-
+//MovLayer ml3 = { &layer3, {1,1}, 0 }; /**< not all layers move */
+MovLayer ml2 = { &layer2, {0,0}, 0 }; 
+MovLayer ml1 = { &layer1, {0,0}, &ml2 }; 
+MovLayer ml0 = { &layer0, {1,2}, &ml1 }; 
 void movLayerDraw(MovLayer *movLayers, Layer *layers)
 {
   int row, col;
@@ -148,7 +150,7 @@ void mlAdvance(MovLayer *ml, Region *fence)
 }
 
 
-u_int bgColor = COLOR_BLUE;     /**< The background color */
+u_int bgColor = COLOR_BLACK;     /**< The background color */
 int redrawScreen = 1;           /**< Boolean for whether screen needs to be redrawn */
 
 Region fieldFence;		/**< fence around playing field  */
@@ -165,7 +167,7 @@ void main()
   configureClocks();
   lcd_init();
   shapeInit();
-  p2sw_init(1);
+  p2sw_init(15);
 
   shapeInit();
 
@@ -179,7 +181,9 @@ void main()
   enableWDTInterrupts();      /**< enable periodic interrupt */
   or_sr(0x8);	              /**< GIE (enable interrupts) */
 
-
+  drawString5x7(0,0,"Player One:",COLOR_RED,COLOR_BLACK);
+  drawString5x7(0,screenWidth+20,"Player Two:",COLOR_RED,COLOR_BLACK);
+  
   for(;;) { 
     while (!redrawScreen) { /**< Pause CPU if screen doesn't need updating */
       P1OUT &= ~GREEN_LED;    /**< Green led off witHo CPU */
@@ -197,9 +201,46 @@ void wdt_c_handler()
   static short count = 0;
   P1OUT |= GREEN_LED;		      /**< Green LED on when cpu on */
   count ++;
+  
   if (count == 15) {
     mlAdvance(&ml0, &fieldFence);
-    if (p2sw_read())
+
+    
+    
+    if ((~BUTTONS) & P1LEFT){
+
+      ml2.velocity.axes[0]=-2;
+      
+    }
+
+    else if((~BUTTONS) & P1RIGHT){
+
+      ml2.velocity.axes[0]=2;
+      
+    }
+    else {
+      ml2.velocity.axes[0]=0;
+    }
+
+    if  ((~BUTTONS) & P2LEFT){
+
+      ml1.velocity.axes[0]=-2;
+      
+    }
+
+    else if((~BUTTONS) & P2RIGHT){
+
+      ml1.velocity.axes[0]=2;
+      
+    }
+
+
+    else {
+    
+      ml1.velocity.axes[0]=0;
+
+      
+    }
       redrawScreen = 1;
     count = 0;
   } 

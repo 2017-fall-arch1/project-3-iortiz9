@@ -166,17 +166,21 @@ int bounce(MovLayer *ml, Region *fence)
       if(ml->layer->abShape == ml0.layer->abShape){
 
 	if(abShapeCheck(ml2.layer->abShape,&ml2.layer->posNext, &newPos)){
-
+	  //if the moving layer is touched then the direction of layer l0 changes in the axis[1] direction(upper paddle)
 	  
 	  int velocity  = ml0.velocity.axes[1] = - ml0.velocity.axes[1];
-	  newPos.axes[1] += (2*velocity);
+	  newPos.axes[1] += (2*velocity);        
 	  
 	  buzzer_set_period(1000);
-	  //for loop
+
 	}
     
+
 	if(abShapeCheck(ml1.layer->abShape,&ml1.layer->posNext, &newPos)){
 
+	  //if the moving layer is touched then the direction of layer l0 changes in the axis[1] direction(lower paddle)
+
+	  
 	  int velocity  = ml0.velocity.axes[1] = - ml0.velocity.axes[1];
 	  newPos.axes[1] += (2*velocity);
 	  buzzer_set_period(1000);
@@ -193,6 +197,9 @@ int bounce(MovLayer *ml, Region *fence)
  }//end function
 //   /**< for ml */
 
+
+/*if the moving laye touches the upper or bottom fence then it adds
+  a point to the opposite player.*/
 
 int addPoints(MovLayer *ml, Region *fence)
  {
@@ -217,15 +224,15 @@ int addPoints(MovLayer *ml, Region *fence)
 	if(player2<3){
 	  
 	  drawChar5x7(70,screenWidth+20,'0' + player2,COLOR_RED,COLOR_BLACK);
-	  buzzer_set_period(1000); 
-	  
+	  //	  buzzer_set_period(1000); 
+	  toggle(1);
 	  return 0;
 	  
 	}
 	else{
 	  
 	  drawString5x7(70,screenWidth+20,"GAME WON",COLOR_RED,COLOR_BLACK);
-	  buzzer_set_period(D); 
+	  //	  buzzer_set_period(D); 
 	  return 1;
 	  
 	}
@@ -241,7 +248,7 @@ int addPoints(MovLayer *ml, Region *fence)
 	  if(player1<3){
 	    
 	    drawChar5x7(70,0,'0' + player1,COLOR_RED,COLOR_BLACK);
-	    buzzer_set_period(1000);
+	    toggle(1);
 	    return 0;
 	  }
 	  else{
@@ -328,12 +335,16 @@ void wdt_c_handler()
     // buzzer_set_period(1000);
     if(addPoints(&ml0,&fieldFence)==1){
       buzzer_set_period(D);
+      toggle(0);
       WDTCTL = WDTPW +WDTHOLD;
       //drawString5x7(70,0,"TESTING",COLOR_RED,COLOR_BLACK);
       
 	}
+
+
+    /* read the button inputto mode the paddles from left to right*/
     
-    if ((~BUTTONS) & P1LEFT){
+    if ((~BUTTONS) & P1LEFT){   
 
       ml2.velocity.axes[0]=-2;
       

@@ -13,6 +13,7 @@
 #include <p2switches.h>
 #include <shape.h>
 #include <abCircle.h>
+#include "buzzer.h"
 
 #define GREEN_LED BIT6
 #define RED_LED BIT0
@@ -27,9 +28,9 @@
 
 char player1,player2 =0;
 
-AbRect bottom_rec = {abRectGetBounds, abRectCheck, {15,2}}; /**< 10x10 rectangle */
+AbRect bottom_rec = {abRectGetBounds, abRectCheck, {8,2}}; /**< 10x10 rectangle */
 
-AbRect top_rec = {abRectGetBounds, abRectCheck, {15,2}}; /**< 10x10 rectangle */
+AbRect top_rec = {abRectGetBounds, abRectCheck, {8,2}}; /**< 10x10 rectangle */
 
 AbRectOutline fieldOutline = {	/* playing field */
   abRectOutlineGetBounds, abRectOutlineCheck,   
@@ -47,7 +48,7 @@ Layer fieldLayer = {		/* playing field as a layer */
 
 Layer layer2 = {		/**< Layer with p1 rectangle */
   (AbShape *)&top_rec,
-  {screenWidth/2, 20}, /**< top of the fence */
+  {screenWidth/2, 25}, /**< top of the fence */
   {0,0}, {0,0},				    /* last & next pos */
   COLOR_RED,
   &fieldLayer,
@@ -55,7 +56,7 @@ Layer layer2 = {		/**< Layer with p1 rectangle */
 
 Layer layer1 = {		/**< Layer with p2 rectangle */
   (AbShape *)&bottom_rec,
-  {screenWidth/2, screenHeight-20}, /**< bottom of fence */
+  {screenWidth/2, screenHeight-25}, /**< bottom of fence */
   {0,0}, {0,0},				    /* last & next pos */
   COLOR_RED,
   &layer2,
@@ -130,6 +131,7 @@ void movLayerDraw(MovLayer *movLayers, Layer *layers)
  *  \param ml The moving shape to be advanced
  *  \param fence The region which will serve as a boundary for ml
  */
+
 void mlAdvance(MovLayer *ml, Region *fence)
 {
   Vec2 newPos;
@@ -150,6 +152,119 @@ void mlAdvance(MovLayer *ml, Region *fence)
 }
 
 
+int bounce(MovLayer *ml, Region *fence)
+ {
+  Vec2 newPos;
+  Vec2 *test;
+  u_char axis;
+  Region shapeBoundary;
+  for (; ml; ml = ml->next) {
+    vec2Add(&newPos, &ml->layer->posNext, &ml->velocity);
+    abShapeGetBounds(ml->layer->abShape, &newPos, &shapeBoundary);
+    
+    buzzer_set_period(1);
+      if(ml->layer->abShape == ml0.layer->abShape){
+
+	if(abShapeCheck(ml2.layer->abShape,&ml2.layer->posNext, &newPos)){
+
+	  
+	  int velocity  = ml0.velocity.axes[1] = - ml0.velocity.axes[1];
+	  newPos.axes[1] += (2*velocity);
+	  
+	  buzzer_set_period(1000);
+	  //for loop
+	}
+    
+	if(abShapeCheck(ml1.layer->abShape,&ml1.layer->posNext, &newPos)){
+
+	  int velocity  = ml0.velocity.axes[1] = - ml0.velocity.axes[1];
+	  newPos.axes[1] += (2*velocity);
+	  buzzer_set_period(1000);
+	  
+	
+	}
+	
+
+      } //if outside fence
+
+
+  }
+  //if moving layer
+ }//end function
+//   /**< for ml */
+
+
+int addPoints(MovLayer *ml, Region *fence)
+ {
+  Vec2 newPos;
+  Vec2 *test;
+  u_char axis;
+  Region shapeBoundary;
+  for (; ml; ml = ml->next) {
+    buzzer_set_period(1);
+    vec2Add(&newPos, &ml->layer->posNext, &ml->velocity);
+    abShapeGetBounds(ml->layer->abShape, &newPos, &shapeBoundary);
+    
+    
+    if(ml->layer->abShape == ml0.layer->abShape){
+      
+      
+      
+      if (shapeBoundary.topLeft.axes[1] < fence->topLeft.axes[1]){
+	
+	player2++;
+	
+	if(player2<3){
+	  
+	  drawChar5x7(70,screenWidth+20,'0' + player2,COLOR_RED,COLOR_BLACK);
+	  buzzer_set_period(1000); 
+	  
+	  return 0;
+	  
+	}
+	else{
+	  
+	  drawString5x7(70,screenWidth+20,"GAME WON",COLOR_RED,COLOR_BLACK);
+	  buzzer_set_period(D); 
+	  return 1;
+	  
+	}
+      }
+    }
+    
+    if(ml->layer->abShape == ml0.layer->abShape){
+      
+      if (shapeBoundary.botRight.axes[1] >  fence->botRight.axes[1]){
+	  
+	player1++;
+	
+	  if(player1<3){
+	    
+	    drawChar5x7(70,0,'0' + player1,COLOR_RED,COLOR_BLACK);
+	    buzzer_set_period(1000);
+	    return 0;
+	  }
+	  else{
+	    
+	    drawString5x7(70,0,"GAME WON",COLOR_RED,COLOR_BLACK);
+	    
+	    return 1; 
+	    
+	  }
+      }
+      
+      
+    }//if outside fence
+    
+    return 0;
+  }
+  //if moving layer
+ }//end function
+//   /**< for ml */
+
+
+
+
 u_int bgColor = COLOR_BLACK;     /**< The background color */
 int redrawScreen = 1;           /**< Boolean for whether screen needs to be redrawn */
 
@@ -167,8 +282,9 @@ void main()
   configureClocks();
   lcd_init();
   shapeInit();
+  buzzer_init();
   p2sw_init(15);
-
+ 
   shapeInit();
 
   layerInit(&layer0);
@@ -176,19 +292,22 @@ void main()
 
 
   layerGetBounds(&fieldLayer, &fieldFence);
-
-
+  
+  
   enableWDTInterrupts();      /**< enable periodic interrupt */
   or_sr(0x8);	              /**< GIE (enable interrupts) */
-
+  
   drawString5x7(0,0,"Player One:",COLOR_RED,COLOR_BLACK);
   drawString5x7(0,screenWidth+20,"Player Two:",COLOR_RED,COLOR_BLACK);
   
   for(;;) { 
     while (!redrawScreen) { /**< Pause CPU if screen doesn't need updating */
       P1OUT &= ~GREEN_LED;    /**< Green led off witHo CPU */
-      or_sr(0x10);	      /**< CPU OFF */
+      or_sr(0x10); 	      /**< CPU OFF */
     }
+    
+   
+    
     P1OUT |= GREEN_LED;       /**< Green led on when CPU on */
     redrawScreen = 0;
     movLayerDraw(&ml0, &layer0);
@@ -205,7 +324,14 @@ void wdt_c_handler()
   if (count == 15) {
     mlAdvance(&ml0, &fieldFence);
 
-    
+    bounce(&ml0,&fieldFence);
+    // buzzer_set_period(1000);
+    if(addPoints(&ml0,&fieldFence)==1){
+      buzzer_set_period(D);
+      WDTCTL = WDTPW +WDTHOLD;
+      //drawString5x7(70,0,"TESTING",COLOR_RED,COLOR_BLACK);
+      
+	}
     
     if ((~BUTTONS) & P1LEFT){
 
@@ -238,7 +364,7 @@ void wdt_c_handler()
     else {
     
       ml1.velocity.axes[0]=0;
-
+      
       
     }
       redrawScreen = 1;
